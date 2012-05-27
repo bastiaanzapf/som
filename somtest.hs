@@ -2,6 +2,7 @@
 
 import Som.Som
 import Som.Gui
+import Som.Lrn
 
 import Data.Array.IArray
 import Data.Array.Base
@@ -38,6 +39,8 @@ maptoimage i image =
        sequence_ [transferpixel rowstride pbData i x y | x<-[0..w-1], y<-[0..h-1] ]
        imageSetFromPixbuf image pb
 
+triples (a:b:c:_) = (a,b,c)
+
 main = do let w=100
               h=100
           arr <- initialize ((0,0),(w,h))
@@ -51,9 +54,11 @@ main = do let w=100
           button <- buttonNew
           set button [ buttonLabel := "Hello World" ]
           radius <- newIORef 5.0
+          datasets <- readLrnFile "../FCPS/01FCPSdata/Atom.lrn"
+          let learndata = map (triples.snd) datasets
           onClicked button (do r <- halfioref radius
                                s <- readIORef som
-                               s_ <- learnbuttonhandler maptoimage r s colors image
+                               s_ <- learnbuttonhandler maptoimage r s learndata image
 --                               print s_
                                writeIORef som s_)
           vbox <- vBoxNew True 2

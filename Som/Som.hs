@@ -5,7 +5,7 @@ module Som.Som (DataPoint, Coordinate, (+.), (*.),
 
 import Data.Array.IArray
 import Data.Array.Base
-import Random
+import System.Random
 
 class DataPoint a where
     (+.) :: a -> a -> a
@@ -55,10 +55,10 @@ initialize bounds = do gen<-getStdGen
                        let l = (randoms gen) :: [Float]
                        return $ array bounds $ zip (range bounds) (fromList l)
 
-foldlearn :: (Ix i,DataPoint d) => (Array i d -> d -> Array i d) -> Array i d -> [d] -> Array i d
-foldlearn l som (p:tp) = foldlearn l (l som p) tp
-foldlearn l som [] = som
+foldl' f z []     = z
+foldl' f z (x:xs) = let z' = z `f` x 
+                    in seq z' $ foldl' f z' xs
 
 learn :: (Ix i,DataPoint d,Coordinate i) => Float -> (Array i d) -> [d] -> (Array i d)    
 learn radius som datapoints =
-    foldlearn (learnpoint radius) som datapoints
+    foldl' (learnpoint radius) som datapoints
