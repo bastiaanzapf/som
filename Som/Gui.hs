@@ -14,7 +14,7 @@ import Data.Word
 
 -- Auf einen Knopfdruck reagieren
 
-learnbuttonhandler :: (Inf d,DataPoint d,Coordinate i,Ix i) => (Array i d -> Image -> IO a) -> Float -> Array i d -> [d] -> Image -> IO (Array i d)
+learnbuttonhandler :: (Show i,Show d,Inf d,DataPoint d,Coordinate i,Ix i) => (Array i d -> Image -> IO a) -> Float -> Array i d -> [d] -> Image -> IO (Array i d)
 learnbuttonhandler maptoimage radius som learnpoints image = 
     do let som_ = learn radius som learnpoints
        maptoimage som_ image
