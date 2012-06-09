@@ -1,6 +1,6 @@
 
-module Som.Som (DataPoint, Coordinate, (+.), (*.), 
-                learn,
+module Som.Som (DataPoint, Coordinate, Inf, (+.), (*.), inf,
+                learn, dzero,
                 learnpoint, initialize, ddistance, fromList, cdistance) where
 
 import Data.Array.IArray
@@ -13,8 +13,12 @@ import Data.Array.Base
 class DataPoint a where
     (+.) :: a -> a -> a
     (*.) :: a -> Float -> a
+    dzero :: a
     ddistance :: a -> a -> Float
     fromList :: [Float] -> [a]
+    dnorm :: a -> Float
+    dnorm x = ddistance dzero x
+
                 
 class Coordinate a where
     cdistance :: a -> a -> Float
@@ -28,12 +32,12 @@ instance Inf Float where
 thawST :: (Ix i, IArray a e) => a i e -> ST s (STArray s i e)
 thawST = thaw
 
-minbysnd :: Ord b => (a,b)->(a,b)->(a,b)
-minbysnd a b = if (snd a)<(snd b)
+minbysnd :: (DataPoint b) => (a,b)->(a,b)->(a,b)
+minbysnd a b = if (dnorm $ snd a)<(dnorm $ snd b)
                  then a 
                  else b
 
-minarray :: (Ix i, Inf e, Num e, Ord e,MArray (STArray a) e (ST s)) => STArray a i e -> ST s (i,e)
+minarray :: (Ix i, DataPoint e,Inf e, Num e, Ord e,MArray (STArray a) e (ST s)) => STArray a i e -> ST s (i,e)
 minarray arr = do as <- getAssocs arr
                   (l,u) <- getBounds arr
                   e <- readArray arr l

@@ -17,9 +17,14 @@ instance DataPoint (Float,Float,Float) where
     (a1,a2,a3) *. s = (s*a1,s*a2,s*a3)
     ddistance (p1,p2,p3) (q1,q2,q3) = (p1-q1)^2+(p2-q2)^2+(p3-q3)^2
     fromList (a:b:c:tl) = (a,b,c):(fromList tl)
+    dzero = (0,0,0)
+
+instance Inf a => Inf (a,a,a) where
+    inf = (inf,inf,inf)
 
 instance Coordinate (Int,Int) where
     cdistance (a1,b1) (a2,b2) = sqrt $ fromIntegral ((a1-a2)^2+(b1-b2)^2)
+
 
 halfioref ioref =
     do a <- readIORef ioref
