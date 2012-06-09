@@ -42,45 +42,53 @@ minarray arr = do as <- getAssocs arr
                              as
 
 
-findclosest :: (Ix i,DataPoint d,Num e,
+findclosest :: (Ix i,DataPoint d,Num e, Inf d,
                 MArray (STArray a) Float (ST s),
                 MArray (STArray a) d (ST s),
                 MArray (STArray a) e (ST s)) => 
                    STArray a i d -> d -> ST s (i,d) --  {    } ... o.0
 
-findclosest arr d = do arr_ <- mapArray (ddistance d) arr
+{- findclosest arr d = do arr_ <- mapArray (ddistance d) arr
                        (l,u) <- getBounds arr_
                        e <- readArray arr l
-                       return (l,e)
+                       Data.Foldable.foldlM
+                       return (l,e) -}
+
+findclosest arr d = do as<-getAssocs arr
+                       (l,u) <- getBounds arr
+                       e <- readArray arr l
+                       return $ Data.Foldable.foldl minbysnd 
+                             (l,inf)
+                             as
+                       
 
 learndistance :: (DataPoint d,Coordinate c) => Float -> c -> d -> c -> d -> d
 learndistance radius ca a cb b = 
     let weight = radius/(radius+(cdistance ca cb))
     in (a *. weight) +. (b *. (1-weight))
                   
-mapArrayIx :: (MArray a e' m, MArray a e m, Ix i) => (i -> e' -> e) -> a i e' -> m (a i e)
+mapArrayIx :: (MArray a e m, Ix i) => (i -> e -> e) -> a i e -> m (a i e)
 mapArrayIx f marr = do 
   (l,u) <- getBounds marr
   n <- getNumElements marr
-  marr' <- newArray_ (l,u)
   Data.Foldable.sequence_ [do
                               e <- readArray marr i
-                              writeArray marr' i (f i e)
+                              writeArray marr i (f i e)
                              | i <- range (l,u)]
-  return marr'
+  return marr
 
 
-learnpoint :: (Coordinate i,Ix i,DataPoint d) => Float -> STArray s i d -> d -> ST s (STArray s i d)
-learnpoint radius som x = 
-    do  (y,z) <- findclosest som x 
-        mapArrayIx (learndistance radius y z) som
+learnpoint :: (Coordinate i,Ix i,DataPoint d,Inf d) => Float -> STArray s i d -> d -> ST s (STArray s i d)
+learnpoint radius som tolearn = 
+    do  (coord,elt) <- findclosest som tolearn
+        mapArrayIx (learndistance radius coord elt) som
 
 initialize :: (Ix a,DataPoint d) => (a,a) -> IO (Array a d)
 initialize bounds = do gen<-getStdGen
                        let l = (randoms gen) :: [Float]
                        return $ array bounds $ zip (range bounds) (fromList l)
 
-learn :: (Ix i,DataPoint d,Coordinate i) => Float -> (Array i d) -> [d] -> Array i d
+learn :: (Ix i,DataPoint d,Coordinate i,Inf d) => Float -> (Array i d) -> [d] -> Array i d
 learn radius som datapoints =
     runST (do som_<-thawST som
               Data.Foldable.foldlM (learnpoint radius) som_ datapoints

@@ -55,7 +55,7 @@ main = do let w=100
           set button [ buttonLabel := "Hello World" ]
           radius <- newIORef 5.0
           datasets <- readLrnFile "Atom.lrn"
-          let learndata = map (triples.snd) datasets
+          let learndata = take 3 $ map (triples.snd) datasets
           onClicked button (do r <- halfioref radius
                                s <- readIORef som
                                s_ <- learnbuttonhandler maptoimage r s learndata image
