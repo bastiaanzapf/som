@@ -83,10 +83,6 @@ initialize bounds = do gen<-getStdGen
 learn :: (Ix i,DataPoint d,Coordinate i) => Float -> (Array i d) -> [d] -> Array i d
 learn radius som datapoints =
     runST (do som_<-thawST som
-              (l,u) <- getBounds som_               
+              Data.Foldable.foldlM (learnpoint radius) som_ datapoints
               freeze som_)
 
-test :: (Ix i,IArray a d) => a i d -> ST s ()
-test som = do let (l,u) = bounds som 
-              som_ <- thawST som
-              return ()
