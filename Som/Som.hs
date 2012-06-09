@@ -33,8 +33,8 @@ instance Inf Float where
 thawST :: (Ix i, IArray a e) => a i e -> ST s (STArray s i e)
 thawST = thaw
 
-minbysnd :: (DataPoint b) => (a,b)->(a,b)->(a,b)
-minbysnd a b = if (dnorm $ snd a)<(dnorm $ snd b)
+minbysnd :: (Ord b) => (a,b)->(a,b)->(a,b)
+minbysnd a b = if (snd a) < (snd b)
                  then a 
                  else b
 
@@ -47,9 +47,9 @@ findclosest :: (Ix i,DataPoint d,Num e, Inf d,
 findclosest arr d = do as<-getAssocs arr
                        (l,u) <- getBounds arr
                        e <- readArray arr l
---                       let (k,e)=Data.Foldable.foldl (\x y->minbysnd x (fst y,snd y+.(d*.(-1)))) (l,e+.(d*.(-1))) as
---                       x <- readArray arr k
-                       return (l,e)
+                       let (k,p)=Data.Foldable.foldl (\x y->minbysnd x y) (l,dnorm ((d*.(-1))+.e)) $ map (\(i,e)->(i,dnorm ((d*.(-1))+.e))) as
+                       x <- readArray arr k
+                       return (k,x)
                        
 learnDistance :: (Show d,DataPoint d,Coordinate c) => Float -> c -> d -> c -> d -> d
 learnDistance radius ca a cb b = 
