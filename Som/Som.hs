@@ -33,12 +33,22 @@ minbysnd a b = if (snd a)<(snd b)
                  then a 
                  else b
 
-minarray :: (Ix i, Inf e, Num e, Ord e) => Array i e -> (i,e)
-minarray arr = Data.Foldable.foldl minbysnd (head $ range $ bounds arr,inf) (assocs arr)
+--minarray :: (Ix i, Inf e, Num e, Ord e) => STArray a i e -> ST s (i,e)
+--minarray arr = do as <- getAssocs arr
+--                  (l,u) <- getBounds arr
+--                e <- readArray arr l
+--                  let k=Data.Foldable.foldl minbysnd (head $ range $ (l,u),inf) as
+--                  return (l,e);
 
-findclosest :: (Ix i,DataPoint d) => Array i d -> d -> (i,d)
-findclosest arr d = let (ix,dist)=minarray (amap (ddistance d) arr)
-                    in (ix,arr ! ix)
+findclosest :: (Ix i,DataPoint d,
+                MArray (STArray a) Float (ST s),
+                MArray (STArray a) d (ST s)) => 
+                   STArray a i d -> d -> ST s (i,e)
+
+findclosest arr d = do arr_ <- mapArray (ddistance d) arr
+                       (l,u) <- getBounds arr
+                       es <- readArray arr l
+                       return (l,head es)
 
 learndistance :: (DataPoint d,Coordinate c) => Float -> c -> d -> c -> d -> d
 learndistance radius ca a cb b = 
@@ -59,8 +69,8 @@ mapArrayIx f marr = do
 
 learnpoint :: (Coordinate i,Ix i,DataPoint d) => Float -> STArray s i d -> d -> ST s (STArray s i d)
 learnpoint radius som x = 
-    let (y,z) = findclosest som x 
-    in mapArrayIx (learndistance radius y z) som
+    do  (y,z) <- findclosest som x 
+        mapArrayIx (learndistance radius y z) som
 
 initialize :: (Ix a,DataPoint d) => (a,a) -> IO (Array a d)
 initialize bounds = do gen<-getStdGen
