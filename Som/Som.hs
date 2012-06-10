@@ -42,7 +42,7 @@ findclosest :: (Ix i,DataPoint d,Inf d,
 findclosest arr d = do (l,u) <- getBounds arr
                        e <- readArray arr l
                        st <- newSTRef (l,(ddistance d e)::Float)
-                       Data.Foldable.sequence_$
+                       Data.Foldable.sequence_ $
                                  [do (e,dist)<-readSTRef st
                                      f<-readArray arr i 
                                      let dist'=(dnorm (f+.(d*.(-1))))
