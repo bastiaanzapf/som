@@ -5,6 +5,7 @@ module Som.Som (DataPoint, Coordinate, Inf, (+.), (*.), inf,
                 learnpoint, ddistance, fromList, cdistance) where
 
 import Data.Array.IArray
+import Data.STRef
 import Data.Array.ST
 import Control.Monad.ST
 import Data.Foldable
@@ -33,35 +34,38 @@ instance Inf Float where
 thawST :: (Ix i, IArray a e) => a i e -> ST s (STArray s i e)
 thawST = thaw
 
-minbysnd :: (Ord b) => (a,b)->(a,b)->(a,b)
-minbysnd a b = if (snd a) < (snd b)
-                 then a 
-                 else b
+findclosest :: (Ix i,DataPoint d,Inf d,
+               MArray (STArray a) d (ST s),
+               MArray (STArray a) Float (ST s)
+               ) => STArray a i d -> d -> ST s (i,d) --  {    } ... o.0
 
-findclosest :: (Ix i,DataPoint d,Num e, Inf d,
-                MArray (STArray a) Float (ST s),
-                MArray (STArray a) d (ST s),
-                MArray (STArray a) e (ST s)) => 
-                   STArray a i d -> d -> ST s (i,d) --  {    } ... o.0
-
-findclosest arr d = do as<-getAssocs arr
-                       (l,u) <- getBounds arr
+findclosest arr d = do (l,u) <- getBounds arr
                        e <- readArray arr l
-                       let (k,p)=Data.Foldable.foldl (\x y->minbysnd x y) (l,dnorm ((d*.(-1))+.e)) $ map (\(i,e)->(i,dnorm ((d*.(-1))+.e))) as
-                       x <- readArray arr k
-                       return (k,x)
+                       st <- newSTRef (l,(ddistance d e)::Float)
+                       Data.Foldable.sequence_$
+                                 [do (e,dist)<-readSTRef st
+                                     f<-readArray arr i 
+                                     let dist'=(dnorm (f+.(d*.(-1))))
+                                     if (dist' < dist)
+                                       then writeSTRef st $ (i,dist')
+                                       else return ()
+                                  | i<-range (l,u)]
+                       (i,d)<-readSTRef st
+                       x<-readArray arr i
+                       return (i,x)
                        
-learnDistance :: (Show d,DataPoint d,Coordinate c) => Float -> c -> d -> c -> d -> d
-learnDistance radius ca a cb b = 
+learnDistance :: (Show d,DataPoint d,Coordinate c,Monad m) => Float -> c -> d -> c -> d -> m d
+learnDistance radius ca a cb b = return $!
      let weight = {-# SCC weight #-} radius/(radius+(cdistance ca cb)) 
-     in {-# SCC weighting #-} (a *. weight) +. (b *. (1-weight)) 
+     in {-# SCC weighting #-} seq weight (a *. weight) +. (b *. (1-weight)) 
                   
-mapArrayIx :: (MArray a e m, Ix i) => (i -> e -> e) -> a i e -> m (a i e)
+mapArrayIx :: (MArray a e m, Ix i) => (i -> e -> m e) -> a i e -> m (a i e)
 mapArrayIx f marr = 
-  do (l,u) <- getBounds marr
-     Data.Foldable.sequence_ [do e <- readArray marr i
-                                 writeArray marr i (f i e)
-                              | i <- range (l,u)]
+  do (l,u) <- {-# SCC bounds #-} getBounds marr
+     Data.Foldable.sequence_ [do e <- {-# SCC read #-} readArray marr i
+                                 e' <-{-# SCC write #-} f i e
+                                 {-# SCC write #-} writeArray marr i e'
+                              | i <- {-# SCC range #-} range (l,u)]
      return marr
 
 learnpoint :: (Show d,Show i,Coordinate i,Ix i,DataPoint d,Inf d) => Float -> STArray s i d -> d -> ST s (STArray s i d)

@@ -16,7 +16,7 @@ import Data.Word
 import System.Random
 
 instance DataPoint [Float] where
-    a +. b = zipWith (+) a b
+    a +. b = seq a seq b zipWith (+) a b
     a *. b = map (* b) a
     ddistance a b = sum $ map (**2) $ zipWith (-) a b 
     fromList = id

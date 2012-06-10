@@ -28,12 +28,9 @@ main = do let w=100
           maptoimage s image
           button <- buttonNew
           set button [ buttonLabel := "Hello World" ]
-          radius <- newIORef 0.3
+          radius <- newIORef 0.1
           datasets <- readLrnFile "Atom.lrn"
-          --          let datasets = colors
-          let learndata = take 40 $ map snd datasets
-          --          let learndata = colors
-          print "and go.."
+          let learndata = map snd datasets
           onClicked button (do r <- halfioref radius
                                s <- readIORef som
                                
