@@ -53,8 +53,8 @@ findclosest arr d = do as<-getAssocs arr
                        
 learnDistance :: (Show d,DataPoint d,Coordinate c) => Float -> c -> d -> c -> d -> d
 learnDistance radius ca a cb b = 
-     let weight = radius/(radius+(cdistance ca cb))
-     in (a *. weight) +. (b *. (1-weight))
+     let weight = {-# SCC weight #-} radius/(radius+(cdistance ca cb)) 
+     in {-# SCC weighting #-} (a *. weight) +. (b *. (1-weight)) 
                   
 mapArrayIx :: (MArray a e m, Ix i) => (i -> e -> e) -> a i e -> m (a i e)
 mapArrayIx f marr = 
@@ -66,8 +66,8 @@ mapArrayIx f marr =
 
 learnpoint :: (Show d,Show i,Coordinate i,Ix i,DataPoint d,Inf d) => Float -> STArray s i d -> d -> ST s (STArray s i d)
 learnpoint radius som tolearn = 
-    do  (coord,elt) <- findclosest som tolearn
-        mapArrayIx (learnDistance radius coord elt) som
+    do  (coord,elt) <- {-# SCC findclosest #-} findclosest som tolearn 
+        {-# SCC map #-} mapArrayIx (learnDistance radius coord elt) som 
 
 
 learn :: (Show d,Show i,Ix i,DataPoint d,Coordinate i,Inf d) => Float -> (Array i d) -> [d] -> (Array i d)
