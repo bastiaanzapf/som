@@ -1,12 +1,12 @@
+{-# LANGUAGE FlexibleContexts #-}
 
 module Som.Som (DataPoint, Coordinate, Inf, (+.), (*.), inf,
                 learn, dzero,
-                learnpoint, initialize, ddistance, fromList, cdistance) where
+                learnpoint, ddistance, fromList, cdistance) where
 
 import Data.Array.IArray
 import Data.Array.ST
 import Control.Monad.ST
-import System.Random
 import Data.Foldable
 import Data.Array.Base
 import System.IO.Unsafe
@@ -16,7 +16,7 @@ class DataPoint a where
     (*.) :: a -> Float -> a
     dzero :: a
     ddistance :: a -> a -> Float
-    fromList :: [Float] -> [a]
+    fromList :: [[Float]] -> [a]
     dnorm :: a -> Float
     dnorm x = ddistance dzero x
 
@@ -69,10 +69,6 @@ learnpoint radius som tolearn =
     do  (coord,elt) <- findclosest som tolearn
         mapArrayIx (learnDistance radius coord elt) som
 
-initialize :: (Ix a,DataPoint d) => (a,a) -> IO (Array a d)
-initialize bounds = do gen<-getStdGen
-                       let l = (randoms gen) :: [Float]
-                       return $ array bounds $ zip (range bounds) (fromList l)
 
 learn :: (Show d,Show i,Ix i,DataPoint d,Coordinate i,Inf d) => Float -> (Array i d) -> [d] -> (Array i d)
 learn radius som datapoints =

@@ -26,7 +26,7 @@ halfioref ioref =
        return a
 
 transferpixel rowstride pbData s x y =
-    do let (a,b,c) = s ! (x,y)
+    do let (a:b:c:_) = s ! (x,y)
        writeArray pbData (x*3+y*rowstride  ) (round (a*255))
        writeArray pbData (x*3+y*rowstride+1) (round (b*255))
        writeArray pbData (x*3+y*rowstride+2) (round (c*255))
