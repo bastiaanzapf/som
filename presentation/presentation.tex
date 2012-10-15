@@ -1,0 +1,167 @@
+\documentclass{beamer}
+\usepackage{graphicx}
+\usepackage{ngerman}
+\usepackage{haskell}
+\usepackage[utf8]{inputenc}
+\usetheme{default}
+\begin{document}
+
+\begin{frame}{Haskell parallel}
+\begin{itemize}
+\item Haskell unterscheidet auf Ebene des Typsystems zwischen
+  reinen und unreinen Berechnungen (Seiteneffekte)
+\item Sehr viel Umstrukturierung durch den Compiler möglich
+\item Reine Berechnungen könnten fast ohne weiteres parallelisiert
+  werden, insbesondere z.B. $map$
+(vgl. Google\textsuperscript{\texttrademark}
+  MapReduce\textsuperscript{\texttrademark})
+\item Funktionen als First Class Citizens - könnte helfen
+\end{itemize}
+\begin{definition}{Fazit}
+Parallelismus beinahe implizit verfügbar
+\end{definition}
+\end{frame}
+
+\begin{frame}{Eden}
+\begin{itemize}
+\item Paralleler Haskell-Dialekt
+\item Übersetzt von gewissen Haskell-Funktionen nach z.B. MPI
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Trans \& Process}
+
+\begin{definition}{Trans}
+Typklasse für ``übertragbare'' Daten
+\end{definition}
+
+\begin{definition}{Process}
+Typklasse für ``übertragbare'' Funktionen
+\end{definition}
+
+\end{frame}
+
+\begin{frame}{Spawn}
+
+Spawn u.A. dienen dazu, Berechnungen ``auszulagern'' an einen anderen
+Rechner. Vergleichbar mit MPI $spawn$.
+
+Expliziter Parallelismus in Haskell.
+
+\end{frame}
+
+\begin{frame}{Monaden}
+\begin{itemize}
+\item Haskell-Konstrukt für ``imperative Programmierung''
+\item vgl. ``Monoid''
+\item Typ höherer Ordnung (``Kind'' $* \rightarrow *$')
+\item Beispiel: $print: String -> IO ()$
+\item $do$-Syntax: ``imperativer Programmblock''
+\end{itemize}
+
+\begin{definition}{IO}
+IO a: ``Skript mit Rückgabewert a'' - Achtung, IO ist atypisch!
+\end{definition}
+
+Listen als Monade: ``Nicht-Deterministische'' Evaluation ohne
+Aufpreis.
+
+\end{frame}
+
+\begin{frame}{ST-Monade}
+\begin{itemize}
+\item mittels $runST$ umzuwandeln in eine ``reine'' Berechnung:
+  $runST :: (forall s. ST s a) -> a$
+\item ermöglicht monadische Formulierung von imperativen Programmen
+  ohne Abhängigkeit von ``unreinen'' Berechnungen
+\item u.A. Arrays, veränderbare Referenzen etc.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{ST-Monade und Eden}
+\begin{itemize}
+\item Problem: $Trans (ST x)$ instanziieren?
+\item Rein technisch wohl möglich
+\item besser erstmal nicht...
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\begin{itemize}
+\item Lieber ``Array'' (reiner Typ) übertragen
+\item Noch besser vielleicht als ``Remote Data''
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Aber...}
+\tiny
+\begin{verbatim}
+Som/Parallel.hs:62:12:
+    Could not deduce (Trans d, Trans i) arising from a use of `spawn'
+    from the context (Show d,
+                      Show i,
+                      Ix i,
+                      DataPoint d,
+                      Coordinate i,
+                      Inf d,
+                      Trans (Array i d))
+      bound by the type signature for
+                 learndataparallel :: (Show d, Show i, Ix i, DataPoint d,
+                                       Coordinate i, Inf d, Trans (Array i d)) =>
+                                      Float -> [Array i d] -> d -> [(i, d)]
+      at Som/Parallel.hs:(61,1)-(64,9)
+    Possible fix:
+      add (Trans d, Trans i) to the context of
+        the type signature for
+          learndataparallel :: (Show d, Show i, Ix i, DataPoint d,
+                                Coordinate i, Inf d, Trans (Array i d)) =>
+                               Float -> [Array i d] -> d -> [(i, d)]
+    In the expression:
+      spawn
+        (repeat
+         $ process
+           $ \ s
+               -> runST
+                  $ do { som_ <- freeze s;
+                         findclosest som_ datapoint })
+\end{verbatim}
+\end{frame}
+
+\begin{frame}
+  Haskell-Typisches Problem: Zusammentreffen von
+  \begin{itemize}
+    \item Mehreren Constraints
+    \item Typen höherer Ordnung
+    \item Unspezifizierte Typen
+  \end{itemize}
+
+  Verlass Dich nie auf Hindley-Milner!
+\end{frame}
+
+\begin{frame}[fragile]
+  Lösung:
+  
+  In mehrere Unterfunktionen mit klaren Typen aufgliedern
+  
+  Hilfreiche Funktion:
+  
+  \begin{haskell*}
+    thawST &::& (Ix i, IArray a e) => a i e -> ST s (STArray s i e)\\
+    thawST &= &thaw
+  \end{haskell*}
+
+  (Typ eingeschränkt ggü. thaw!)
+
+  2 Zeilen klären eine ganze Menge Typ-Unklarheiten
+
+\end{frame}
+
+\begin{frame}{Remote Data}
+\begin{itemize}
+\item Verwaltung von Daten als ``Handle''
+\item Vermeidet unnötige Übertragung
+\item 
+\end{itemize}
+\end{frame}
+
+\end{document}

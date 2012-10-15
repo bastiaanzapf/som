@@ -1,4 +1,6 @@
 
+-- .lrn parser
+
 module Som.Lrn (DataSet,readLrnFile) where
 
 import System.IO

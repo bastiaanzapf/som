@@ -1,0 +1,15 @@
+Lösung:
+
+  In mehrere Unterfunktionen mit klaren Typen aufgliedern
+
+  Hilfreiche Funktion:
+
+  \begin{haskell*}
+    thawST &::& (Ix i, IArray a e) => a i e -> ST s (STArray s i e)\\
+    thawST &= &thaw
+  \end{haskell*}
+
+  (Typ eingeschränkt ggü. thaw!)
+
+  2 Zeilen klären eine ganze Menge Typ-Unklarheiten
+

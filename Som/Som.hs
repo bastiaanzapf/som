@@ -2,7 +2,8 @@
 
 module Som.Som (DataPoint, Coordinate, Inf, (+.), (*.), inf,
                 learn, dzero,
-                learnpoint, ddistance, fromList, cdistance) where
+                learnpoint, ddistance, fromList, cdistance,
+                mapArrayIx, findclosest, learnDistance, thawST) where
 
 import Data.Array.IArray
 import Data.STRef
@@ -34,6 +35,8 @@ instance Inf Float where
 thawST :: (Ix i, IArray a e) => a i e -> ST s (STArray s i e)
 thawST = thaw
 
+-- Find best match
+
 findclosest :: (Ix i,DataPoint d,Inf d,
                MArray (STArray a) d (ST s),
                MArray (STArray a) Float (ST s)
@@ -53,12 +56,16 @@ findclosest arr d = do (l,u) <- getBounds arr
                        (i,d)<-readSTRef st
                        x<-readArray arr i
                        return (i,x)
+
+-- Distance Function
                        
 learnDistance :: (Show d,DataPoint d,Coordinate c,Monad m) => Float -> c -> d -> c -> d -> m d
 learnDistance radius ca a cb b = return $!
      let weight = {-# SCC weight #-} radius/(radius+(cdistance ca cb)) 
      in {-# SCC weighting #-} seq weight (a *. weight) +. (b *. (1-weight)) 
-                  
+
+-- map with indexes
+
 mapArrayIx :: (MArray a e m, Ix i) => (i -> e -> m e) -> a i e -> m (a i e)
 mapArrayIx f marr = 
   do (l,u) <- {-# SCC bounds #-} getBounds marr
@@ -68,16 +75,19 @@ mapArrayIx f marr =
                               | i <- {-# SCC range #-} range (l,u)]
      return marr
 
+-- learn a single point
+
 learnpoint :: (Show d,Show i,Coordinate i,Ix i,DataPoint d,Inf d) => Float -> STArray s i d -> d -> ST s (STArray s i d)
 learnpoint radius som tolearn = 
     do  (coord,elt) <- {-# SCC findclosest #-} findclosest som tolearn 
         {-# SCC map #-} mapArrayIx (learnDistance radius coord elt) som 
 
 
+-- learn a list of points
+
 learn :: (Show d,Show i,Ix i,DataPoint d,Coordinate i,Inf d) => Float -> (Array i d) -> [d] -> (Array i d)
 learn radius som datapoints =
     runST (do som_<-thawST som
               Prelude.sequence_ $ map (learnpoint radius som_) datapoints
-              let m=unsafePerformIO (print "Test")              
               freeze som_)
 
